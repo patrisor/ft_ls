@@ -1,0 +1,1 @@
+gcc -g -I lib/ft_printf/inc/libftprintf.h -o ft_ls lib/ft_printf/libftprintf.a main.c
