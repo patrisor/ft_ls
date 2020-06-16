@@ -1,5 +1,20 @@
 #include "inc/ft_ls.h"
 
+// ARGS
+void    push_arg(t_node **head_ref, void *new_data, size_t data_size);
+void    free_list(t_node *head);
+// DOUBLY-LINKED LIST DIRENTS
+void    free_dir(t_file *head);
+void    append_dirent(t_file **head_ref, struct dirent *dirent);
+void	print_dir(t_file *root);
+t_file	*get_dir(char *dir_name);
+t_file  *last_dirent(t_file *root);
+// FT_LS
+void	recur_search(char *dir_name, int *hit);
+void	dir_to_long_list_format(char *dir_name);
+int	exec_with_args(char *dir_name, t_node *ls_args);
+int	parse_flag(char *flag, t_node **ls_args);
+
 /* ************************************************************************** */
 /* ******************************** AUXILIARY ******************************* */
 /* ************************************************************************** */
@@ -51,7 +66,7 @@ void	free_list(t_node *head)
 /*
  * Method recursively merges two file lonked-lists together.
  */
-t_file	*merge(t_file *a, t_file *b) 
+t_file	*merge(t_file *a, t_file *b)
 {
 	t_file	*merged;
 
@@ -78,7 +93,7 @@ void	partition(t_file *head, t_file **front, t_file **back)
 {
 	t_file *fast;
 	t_file *slow;
-	
+
 	if (head == NULL || head->next == NULL)
 	{
 		*front = head;
@@ -143,6 +158,19 @@ void	free_dir(t_file *head)
 	free(head);
 }
 
+/*
+ * Utility function to find last node of linked list.
+ */
+t_file	*last_dirent(t_file *root)
+{
+	while (root && root->next)
+		root = root->next;
+	return root;
+}
+
+/* ************************************************************************** */
+/* ********************************* VIEW *********************************** */
+/* ************************************************************************** */
 
 /* TODO: Customize file Objects Here
  * Method appends object (dirent) to end of head_ref doubly-linked list
@@ -173,11 +201,6 @@ void	append_dirent(t_file **head_ref, struct dirent *dirent)
 	last->next = new_node;
 	new_node->prev = last;
 }
-
-
-/* ************************************************************************** */
-/* ******************************** FT_LS *********************************** */
-/* ************************************************************************** */
 
 /* TODO: VIEW
  * Method prints the directory, based on the different arguments parsed.
@@ -218,6 +241,53 @@ t_file	*get_dir(char *dir_name)
         closedir(dir);
 	return(root);
 }
+
+
+/* ************************************************************************** */
+/* ******************************** FT_LS *********************************** */
+/* ************************************************************************** */
+
+/*
+ * TODO: Parse Arguments
+ * Stores file data to fileobject into Binary Tree
+ * Prints the sorted file tree
+ */
+int	exec_with_args(char *dir_name, t_node *ls_args) 
+{
+	t_file	*dir;
+	int	hit;
+	
+	// TODO: 
+	// 	- Print based off the different parameters (parsed as char *)
+	// L Flag
+
+	dir = NULL;
+	if ((dir = get_dir(dir_name)) == NULL)
+		return (-1);
+
+	if (ls_args) 
+	{
+		while (ls_args) 
+		{
+			if(*((char *)ls_args->data) == 'l')
+				ft_printf("-L FLAG \n");
+			if(*((char *)ls_args->data) == 'R')
+			{
+				hit = 0;
+				recur_search(dir_name, &hit);
+			}
+			ls_args = ls_args->next;
+		}
+	} 
+	else
+	{
+		print_dir(dir);
+	}
+
+	free_dir(dir);
+	return(0);
+}
+
 
 // TODO: 
 void	recur_search(char *dir_name, int *hit)
@@ -262,43 +332,6 @@ void	recur_search(char *dir_name, int *hit)
 	free_dir(dir);
 }
 
-/*
- * TODO: Parse Arguments
- * Stores file data to fileobject into Binary Tree
- * Prints the sorted file tree
- */
-int	exec_with_args(char *dir_name, t_node *ls_args) 
-{
-	t_file	*dir;
-	int	hit;
-	
-	// TODO: 
-	// 	- Print based off the different parameters (parsed as char *)
-	// R Flag
-
-	dir = NULL;
-	if ((dir = get_dir(dir_name)) == NULL)
-		return (-1);
-	if (ls_args) 
-	{
-		while (ls_args) 
-		{
-			if(*((char *)ls_args->data) == 'R')
-			{
-				hit = 0;
-				recur_search(dir_name, &hit);
-			}
-			ls_args = ls_args->next;
-		}
-	} 
-	else
-	{
-		print_dir(dir);
-	}
-	free_dir(dir);
-	return(0);
-}
-
 /* 
  * Method stores ls arguments bytes found in flag into ls_args list
  */
@@ -335,10 +368,10 @@ int	main(int argc, char **argv)
 	if (argc > 1)
 	{
 		tmp = ++argv;
-		read_args_flag = 1;
+		read_args_flag = 0;
 		while (*tmp)
 		{
-			if ((*tmp)[0] == '-' && read_args_flag) // Found argument
+			if ((*tmp)[0] == '-' && !read_args_flag) // Found argument
 			{
 				parse_flag(*tmp, &ls_args);
 			}
@@ -350,13 +383,15 @@ int	main(int argc, char **argv)
 						exec_with_args(*tmp, ls_args);
 					else // Found File
 						ft_printf("%s\n", *tmp);
+					read_args_flag = 1;
 				}
 				else
-					ft_printf("ft_ls: %s: No such file or directory", *tmp);
-				read_args_flag = 0;
+					ft_printf("ft_ls: %s: No such file or directory\n", *tmp);
 			}
 			tmp++;
 		}
+		if (!read_args_flag) // If no directories were found in args, then it will run execution on the current directory
+			exec_with_args(".", ls_args);
 		free_list(ls_args);
 	}
 	else 
