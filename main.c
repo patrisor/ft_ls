@@ -19,7 +19,22 @@ int	parse_flag(char *flag, t_node **ls_args);
 /* ******************************** AUXILIARY ******************************* */
 /* ************************************************************************** */
 
+int	listlen(t_file *list)
+{
+	int	count;
+	t_file	*tmp;
 
+	if (list == NULL)
+		return (0);
+	tmp = list;
+	count = 0;
+	while (tmp)
+	{
+		++count;
+		tmp = tmp->next;
+	}
+	return (count);
+}
 
 /* ************************************************************************** */
 /* ********************************* ARGS *********************************** */
@@ -59,7 +74,58 @@ void	free_list(t_node *head)
 }
 
 /* ************************************************************************** */
-/* **************************** MERGE SORT ********************************** */
+/* **************************** INSERTION SORT ****************************** */
+/* ************************************************************************** */
+
+// function to insert a new node in sorted way in
+// a sorted doubly linked list
+void	sorted_insert(t_file **source, t_file *new_node)
+{
+	t_file	*current;
+
+	if (*source == NULL)
+		*source = new_node;
+	else if (ft_strcmp((*source)->name, new_node->name) >= 0)
+	{
+		new_node->next = *source;
+		new_node->next->prev = new_node;
+		*source = new_node;
+	}
+	else
+	{
+		current = *source;
+		while (current->next != NULL &&
+			ft_strcmp(current->next->name, new_node->name) < 0)
+			current = current->next;
+		new_node->next = current->next;
+		if (current->next != NULL)
+			new_node->next->prev = new_node;
+		current->next = new_node;
+		new_node->prev = current;
+	}
+}
+
+// function to sort a doubly linked list using insertion sort
+void	insertion_sort(t_file **source)
+{
+	t_file	*sorted;
+	t_file	*current;
+
+	sorted = NULL;
+	current = *source;
+	while (current != NULL)
+	{
+		t_file *next = current->next;
+		current->prev = NULL;
+		current->next = NULL;
+		sorted_insert(&sorted, current);
+		current = next;
+	}
+	*source = sorted;
+}
+
+/* ************************************************************************** */
+/* ****************************** MERGE SORT ******************************** */
 /* ************************************************************************** */
 // Credits: https://quinston.com/code-snippets/merge-sort-with-linked-list-code
 
@@ -119,23 +185,34 @@ void	partition(t_file *head, t_file **front, t_file **back)
 }
 
 /*
- * Method sorts the t_file linked-list using Merge sort.
+ * Method sorts the t_file linked-list using a modified merge sort,
+ * which will continue partitioning until list of size SORT_THRESHOLD is found,
+ * then will simply run insertion sort [Worst-Case: O(n^2)] on that list,
+ * then merge with other lists to beat the speed of O(log n) of smaller arrays.
  */
-void	sort_dir(t_file **source)
+void	merge_insertion_sort(t_file **source)
 {
 	t_file	*head;
 	t_file	*a;
 	t_file	*b;
-
-	head = *source;
-	if (head == NULL || head->next == NULL)
+	
+	if (listlen(*source) <= SORT_THRESHOLD)
+	{
+		insertion_sort(source);
 		return ;
-	a = NULL;
-	b = NULL;
-	partition(head, &a, &b);
-	sort_dir(&a);
-	sort_dir(&b);
-	*source = merge(a, b);
+	} 
+	else 
+	{
+		head = *source;
+		if (head == NULL || head->next == NULL)
+			return ;
+		a = NULL;
+		b = NULL;
+		partition(head, &a, &b);
+		merge_insertion_sort(&a);
+		merge_insertion_sort(&b);
+		*source = merge(a, b);
+	}
 }
 
 /* ************************************************************************** */
@@ -237,7 +314,7 @@ t_file	*get_dir(char *dir_name)
 	root = NULL;
 	while ((dirent = readdir(dir)) != NULL)
 		append_dirent(&root, dirent);
-	sort_dir(&root);
+	merge_insertion_sort(&root);
         closedir(dir);
 	return(root);
 }
